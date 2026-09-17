@@ -4,20 +4,24 @@ Quick Bar card for the AYANEO 3 detachable controller: shows which module
 is inserted on each side and provides Pop Left / Pop Right / Pop Both,
 replicating the UX Handheld Daemon used to offer.
 
-Built ahead of maintainer feedback (see below) against OGUI v0.46 /
-plugin API 2.0.0, mirroring the structure of
+Built against OGUI v0.46 / plugin API 2.0.0, mirroring the structure of
 [OpenGamepadUI-discord](https://github.com/ShadowBlip/OpenGamepadUI-discord)
-and the core quick-bar cards.
+and the core quick-bar cards. Developed as part of the
+[AYANEO 3 × Bazzite compatibility workbench](https://github.com/matmartinez/ayaneo-3-bazzite-compat),
+where the kernel-side history lives.
 
 ## Requirements
 
 - `ayaneo-ec` kernel driver (mainline ≥ 6.19, in Bazzite 44)
-- `hid-ayaneo` kernel driver
-  ([OpenGamingCollective/linux#101](https://github.com/OpenGamingCollective/linux/pull/101),
-  source in `../hid-ayaneo/`)
-- Write access to the control attributes for the OGUI user — install
-  `70-ayaneo-modules.rules` into `/etc/udev/rules.d/` (development
-  stopgap; see "Open questions").
+- `hid-ayaneo` kernel driver (on LKML and
+  [OpenGamingCollective/linux#101](https://github.com/OpenGamingCollective/linux/pull/101);
+  source in the
+  [workbench](https://github.com/matmartinez/ayaneo-3-bazzite-compat/tree/main/hid-ayaneo))
+- Write access to the control attributes for the OGUI user. OpenGamepadUI
+  ships the udev rule since v0.46.1
+  ([ShadowBlip/OpenGamepadUI#536](https://github.com/ShadowBlip/OpenGamepadUI/pull/536));
+  on older OGUI installs, copy `70-ayaneo-modules.rules` into
+  `/etc/udev/rules.d/` (kept here for that case).
 
 ## How it works
 
@@ -33,6 +37,14 @@ automatically. `core/modules_card.gd`/`.tscn` is the Quick Bar card
 `plugin.json` carries the `"quick-bar"` store tag — mandatory, since
 Bazzite 44 runs OGUI in overlay mode, which only loads plugins with that
 tag.
+
+## Install
+
+Preferred: the OpenGamepadUI plugin store (Settings → Plugins), once the
+[registry entry](https://github.com/ShadowBlip/OpenGamepadUI-plugins) is
+merged. Manual: download `ayaneo-modules.zip` from a
+[release](https://github.com/matmartinez/OpenGamepadUI-ayaneo-modules/releases)
+into `~/.local/share/opengamepadui/plugins/` and restart the session.
 
 ## Build
 
@@ -59,13 +71,11 @@ hint (the L/R-not-interchangeable warning from AYASpace).
 ### Dev loop (no Godot export needed)
 
 The PluginLoader mounts plugin zips as plain resource packs and GDScript
-compiles at runtime, so a hand-built zip works:
+compiles at runtime, so a hand-built zip works (release zips are built
+the same way):
 
 ```sh
-python3 -c "import zipfile
-z = zipfile.ZipFile('ayaneo-modules.zip', 'w')
-for f in ['plugin.json', 'plugin.gd', 'core/magic_modules.gd', 'core/modules_card.gd', 'core/modules_card.tscn']:
-    z.write(f, 'plugins/ayaneo-modules/' + f)"
+python3 pack.py
 cp ayaneo-modules.zip ~/.local/share/opengamepadui/plugins/
 rm -rf ~/.local/share/opengamepadui/plugins/ayaneo-modules  # stale extraction
 systemctl --user restart gamescope-session-plus@ogui-steam.service
@@ -106,15 +116,16 @@ brightness slider (OGUI `slider.tscn`), as a separate row or card — not
 interleaved with the pop buttons. No existing OGUI RGB plugin to
 reference; the closest UI pattern is the core quick-settings sliders.
 
-## Open questions (pending ShadowBlip/OpenGamepadUI#528 feedback)
+## Design notes (settled via ShadowBlip/OpenGamepadUI#528)
 
-1. **External plugin vs. in-tree platform code.** OGUI has a
-   `core/platform/` per-device layer with an established pkexec/polkit
-   pattern. If maintainers prefer that, this code ports over — the
-   backend and card logic are the same, only packaging changes.
+1. **External plugin, not in-tree platform code** — the maintainer's
+   plan of record is kernel driver → OGUI plugin; this repo is that
+   plugin. If it ever moves in-tree, the backend and card logic port
+   as-is, only packaging changes.
 2. **Privilege model.** Plugin zips install to the user's home and
-   cannot ship udev rules or polkit policies, so unprivileged sysfs
-   access must be granted by the OS/driver packaging (the udev rule
-   here) — or the pkexec pattern if in-tree.
-3. **Driver sysfs names** may change during kernel review; paths are
-   confined to `core/magic_modules.gd`.
+   cannot ship udev rules, so unprivileged sysfs access comes from
+   OGUI's packaging: the udev rule was upstreamed in
+   [ShadowBlip/OpenGamepadUI#536](https://github.com/ShadowBlip/OpenGamepadUI/pull/536)
+   (shipped since v0.46.1).
+3. **Driver sysfs names** may still change during LKML review; paths
+   are confined to `core/magic_modules.gd`.
