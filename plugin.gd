@@ -48,6 +48,17 @@ func _ready() -> void:
 	card = card_scene.instantiate()
 	card.setup(backend)
 
+	_attach_card.call_deferred()
+
+
+## Hand the card to the quick bar menu. Deferred out of _ready: in OGUI
+## v0.46.1 overlay mode plugins become ready before the QuickBarMenu's
+## own @onready vars are set, and calling add_to_quick_bar that early
+## crashes the release build on a null viewport.
+func _attach_card() -> void:
+	var qb := get_tree().get_first_node_in_group("quick-bar")
+	if qb and not qb.is_node_ready():
+		await qb.ready
 	var icon := load("res://assets/ui/icons/gamepad-bold.svg") as Texture2D
 	add_to_quick_bar(card, icon)
 	logger.info("AYANEO Magic Modules plugin loaded")

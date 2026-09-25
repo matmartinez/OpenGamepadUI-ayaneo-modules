@@ -1,7 +1,7 @@
 {
   "plugin.id": "ayaneo-modules",
   "plugin.name": "AYANEO Magic Modules",
-  "plugin.version": "1.0.0",
+  "plugin.version": "1.0.1",
   "plugin.min-api-version": "2.0.0",
   "plugin.link": "https://github.com/matmartinez/OpenGamepadUI-ayaneo-modules",
   "plugin.source": "https://github.com/matmartinez/OpenGamepadUI-ayaneo-modules",
