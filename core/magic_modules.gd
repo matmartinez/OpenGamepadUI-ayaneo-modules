@@ -148,6 +148,11 @@ func _refresh_module_names() -> bool:
 
 ## Resolve a hid-ayaneo sysfs attribute path. The HID device address
 ## changes on every rebind, so glob the driver directory each time.
+## After a reinsertion the controller re-enumerates as several interface
+## nodes bound to hid-ayaneo (mouse, keyboard, control); the module
+## attributes live only on the control node, so return the first entry
+## that actually carries the requested attribute rather than the first
+## bound node (which may be an input interface without it).
 func _hid_attr(attr: String) -> String:
 	var dir := DirAccess.open(HID_DRIVER_DIR)
 	if not dir:
@@ -156,7 +161,9 @@ func _hid_attr(attr: String) -> String:
 	var entry := dir.get_next()
 	while entry != "":
 		if entry.contains(":") and dir.dir_exists(entry):
-			return HID_DRIVER_DIR + "/" + entry + "/" + attr
+			var path := HID_DRIVER_DIR + "/" + entry + "/" + attr
+			if FileAccess.file_exists(path):
+				return path
 		entry = dir.get_next()
 	return ""
 
